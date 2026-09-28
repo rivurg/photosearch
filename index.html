@@ -3,112 +3,206 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#000">
-<title>PhotoBrain</title>
+<title>PhotoBrain AI</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#080808;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}
-.app{min-height:100vh;max-width:760px;margin:auto;display:flex;flex-direction:column}
-header{padding:22px 18px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(8,8,8,.9);backdrop-filter:blur(18px);z-index:3}
-.logo{font-size:22px;font-weight:800;letter-spacing:-.6px}.viral{font-size:11px;color:#888}
-main{flex:1;padding:12px 16px 110px}.welcome{padding:34px 8px 20px}.welcome h1{font-size:34px;line-height:1.05;margin:0 0 10px}.welcome p{color:#999;margin:0;line-height:1.5}
-.chips{display:flex;gap:8px;overflow:auto;padding:10px 0 18px}.chip{border:1px solid #252525;background:#111;color:#ddd;border-radius:999px;padding:9px 13px;white-space:nowrap;font-size:13px}
-.message{display:flex;margin:16px 0}.bubble{max-width:88%;padding:12px 14px;border-radius:18px;background:#151515;line-height:1.45}.user{justify-content:flex-end}.user .bubble{background:#fff;color:#000}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}.card{background:#111;border:1px solid #222;border-radius:16px;overflow:hidden}.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block}.meta{padding:9px 10px;font-size:12px;color:#aaa}.meta b{color:#eee;display:block;margin-bottom:3px}
-.empty{border:1px dashed #303030;border-radius:18px;padding:28px;text-align:center;color:#888;margin-top:15px}
-.composer{position:fixed;bottom:0;left:0;right:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#080808 24%);z-index:4}.bar{max-width:760px;margin:auto;display:flex;gap:8px;background:#151515;border:1px solid #292929;border-radius:22px;padding:7px}.bar input{flex:1;background:transparent;border:0;outline:0;color:#fff;padding:10px;font-size:16px;min-width:0}.btn{border:0;border-radius:17px;padding:0 14px;background:#fff;color:#000;font-weight:700}.add{background:#222;color:#fff;border:1px solid #333;padding:10px 12px;border-radius:16px}.hidden{display:none}
-.small{font-size:12px;color:#777;margin-top:8px}
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#050505;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}
+main{max-width:900px;margin:auto;padding:42px 18px 90px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+h1{font-size:38px;margin:0;font-weight:750;letter-spacing:-1.5px}
+.sub{color:#777;font-size:16px}
+.search{display:flex;gap:10px;align-items:center;border:1px solid #292929;background:#121212;border-radius:28px;padding:7px 8px 7px 15px}
+input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:white;font-size:18px}
+button{border:0;border-radius:22px;background:#fff;color:#111;padding:13px 18px;font-size:16px;font-weight:650}
+.add{width:48px;height:48px;padding:0;font-size:28px;background:#202020;color:white}
+.status{margin:16px 0;color:#888;min-height:24px}
+.chips{display:flex;gap:8px;overflow:auto;padding-bottom:12px}
+.chip{white-space:nowrap;background:#181818;color:#ddd;border:1px solid #292929;border-radius:20px;padding:9px 14px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:18px}
+.card{background:#111;border-radius:16px;overflow:hidden}
+.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.name{padding:9px 10px;color:#aaa;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{margin-top:28px;color:#777;text-align:center;padding:30px}
+progress{width:100%;height:6px}
+.small{font-size:13px;color:#666;line-height:1.45;margin-top:10px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
-<div class="app">
-<header><div class="logo">PhotoBrain</div><div class="viral">your photos, smarter</div></header>
-<main id="chat">
-<section class="welcome" id="welcome">
-<h1>Что ищем,<br>чувак?</h1>
-<p>Добавь фотографии и ищи их обычным языком — по имени файла, дате и описанию.</p>
-</section>
+<main>
+<header><h1>PhotoBrain</h1><div class="sub">AI photo search</div></header>
+
 <div class="chips">
-<button class="chip" onclick="ask('Найди кроссовки')">👟 Кроссовки</button>
-<button class="chip" onclick="ask('Покажи последние фото')">🕐 Последние</button>
-<button class="chip" onclick="ask('Найди фото с курткой')">🧥 Куртка</button>
-<button class="chip" onclick="ask('Покажи все фото')">🖼️ Все фото</button>
+<button class="chip" data-q="мои кроссовки">Кроссовки</button>
+<button class="chip" data-q="куртка">Куртка</button>
+<button class="chip" data-q="машина">Машина</button>
+<button class="chip" data-q="люди">Люди</button>
+<button class="chip" data-q="последние">Последние</button>
 </div>
-<div id="messages"></div>
+
+<div class="search">
+<button class="add" id="add">+</button>
+<input id="query" placeholder="Например: чёрные кроссовки">
+<button id="go">➤</button>
+<input id="files" type="file" accept="image/*" multiple hidden>
+</div>
+
+<div id="status" class="status">Загрузи фотографии — AI будет искать по содержимому.</div>
+<progress id="progress" value="0" max="1" hidden></progress>
+<div id="hint" class="small"></div>
+<div id="grid" class="grid"></div>
+<div id="empty" class="empty">Пока фотографий нет.</div>
 </main>
-<div class="composer">
-<div class="bar">
-<button class="add" onclick="document.getElementById('picker').click()">＋</button>
-<input id="query" placeholder="Например: мои кроссовки">
-<button class="btn" onclick="send()">➤</button>
-</div>
-<input id="picker" class="hidden" type="file" accept="image/*" multiple onchange="addPhotos(event)">
-<div class="small" id="status">Фото хранятся локально в этой вкладке.</div>
-</div>
-</div>
-<script>
-let photos=[];
-const messages=document.getElementById('messages');
-const status=document.getElementById('status');
 
-function addPhotos(e){
-  const files=[...e.target.files];
-  files.forEach(file=>{
+<script type="module">
+import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2";
+
+const filesInput = document.getElementById("files");
+const add = document.getElementById("add");
+const queryInput = document.getElementById("query");
+const go = document.getElementById("go");
+const grid = document.getElementById("grid");
+const empty = document.getElementById("empty");
+const status = document.getElementById("status");
+const progress = document.getElementById("progress");
+const hint = document.getElementById("hint");
+
+let photos = [];
+let extractor = null;
+let modelLoading = null;
+
+add.onclick = () => filesInput.click();
+filesInput.onchange = async e => {
+  const selected = [...e.target.files];
+  for (const file of selected) {
     photos.push({
-      name:file.name,
-      date:new Date(file.lastModified||Date.now()),
-      url:URL.createObjectURL(file),
-      size:file.size
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name,
+      embedding: null
     });
-  });
-  status.textContent=`Загружено фотографий: ${photos.length}`;
-  if(files.length) addBot(`Добавил ${files.length} фото. Теперь можешь спросить, что найти.`);
-  e.target.value='';
-}
-function bubble(text, who='bot'){
-  const row=document.createElement('div'); row.className='message '+(who==='user'?'user':'');
-  const b=document.createElement('div'); b.className='bubble'; b.textContent=text;
-  row.appendChild(b); messages.appendChild(row);
-  window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
-}
-function addBot(text){bubble(text,'bot')}
-function addUser(text){bubble(text,'user')}
+  }
+  render(photos);
+  filesInput.value = "";
+  if (photos.length) {
+    await ensureModel();
+    await indexNewPhotos();
+  }
+};
 
-function tokenize(s){return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').split(/\s+/).filter(x=>x.length>1)}
-function search(q){
-  if(!photos.length) return [];
-  const words=tokenize(q);
-  const stop=new Set(['найди','покажи','фото','фотку','фотки','мои','все','с','на','и','за','последние','последнюю','мне']);
-  const terms=words.filter(x=>!stop.has(x));
-  return photos.map(p=>{
-    const text=(p.name+' '+p.date.toLocaleDateString('ru-RU')).toLowerCase();
-    let score=0;
-    terms.forEach(t=>{if(text.includes(t)) score+=3;});
-    if(q.toLowerCase().includes('послед') ) score += p.date.getTime()/1e13;
-    if(q.toLowerCase().includes('все')) score+=1;
-    return {...p,score};
-  }).filter(p=>p.score>0 || terms.length===0).sort((a,b)=>b.score-a.score);
-}
-function render(results){
-  const wrap=document.createElement('div'); wrap.className='grid';
-  results.slice(0,20).forEach(p=>{
-    const c=document.createElement('div'); c.className='card';
-    c.innerHTML=`<img src="${p.url}" alt=""><div class="meta"><b>${escapeHtml(p.name)}</b>${p.date.toLocaleDateString('ru-RU')}</div>`;
-    wrap.appendChild(c);
+document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+  queryInput.value = b.dataset.q;
+  search();
+});
+go.onclick = search;
+queryInput.onkeydown = e => { if(e.key === "Enter") search(); };
+
+async function ensureModel(){
+  if(extractor) return extractor;
+  if(modelLoading) return modelLoading;
+  status.textContent = "Первый запуск: загружаю AI-модель…";
+  hint.textContent = "Это может занять некоторое время. Потом модель останется в кэше браузера.";
+  modelLoading = pipeline("image-feature-extraction", "Xenova/clip-vit-base-patch32", {
+    quantized: true
   });
-  messages.appendChild(wrap);
+  extractor = await modelLoading;
+  modelLoading = null;
+  status.textContent = `AI готов. Фотографий: ${photos.length}`;
+  return extractor;
 }
-function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function ask(q){document.getElementById('query').value=q;send()}
-function send(){
-  const input=document.getElementById('query'); const q=input.value.trim(); if(!q)return;
-  addUser(q); input.value='';
-  const results=search(q);
-  if(!photos.length){addBot('Сначала нажми ＋ и выбери фотографии из медиатеки iPhone.');return;}
-  if(!results.length){addBot('Пока ничего подходящего не нашёл. Попробуй другое описание или имя файла.');return;}
-  addBot(`Нашёл ${results.length} подходящих фото:`);
-  render(results);
+
+async function imageFromPhoto(p){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = p.url;
+  });
 }
-document.getElementById('query').addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+
+function normalize(arr){
+  let s = Math.sqrt(arr.reduce((a,v)=>a+v*v,0));
+  return arr.map(v=>v/(s||1));
+}
+function cosine(a,b){
+  let s=0;
+  for(let i=0;i<a.length;i++) s+=a[i]*b[i];
+  return s;
+}
+
+async function embedImage(p){
+  if(p.embedding) return p.embedding;
+  const img = await imageFromPhoto(p);
+  const out = await extractor(img);
+  let data = out.data ? Array.from(out.data) : Array.from(out.tolist()[0]);
+  p.embedding = normalize(data);
+  return p.embedding;
+}
+
+async function indexNewPhotos(){
+  progress.hidden=false;
+  for(let i=0;i<photos.length;i++){
+    if(photos[i].embedding) continue;
+    status.textContent = `AI анализирует фото ${i+1} из ${photos.length}…`;
+    progress.value = i/photos.length;
+    await embedImage(photos[i]);
+  }
+  progress.value=1;
+  progress.hidden=true;
+  status.textContent = `Готово. Проиндексировано фото: ${photos.length}`;
+  hint.textContent = "Поиск выполняется прямо в браузере; фотографии не загружаются на GitHub.";
+}
+
+async function search(){
+  const q = queryInput.value.trim();
+  if(!q) return;
+  if(!photos.length){ status.textContent="Сначала добавь фотографии."; return; }
+
+  if(q.toLowerCase()==="последние"){
+    render([...photos].reverse());
+    status.textContent="Показаны последние добавленные фото.";
+    return;
+  }
+
+  await ensureModel();
+  await indexNewPhotos();
+
+  status.textContent = "Ищу по содержимому фотографий…";
+  // CLIP text embeddings
+  const textExtractor = await pipeline("zero-shot-image-classification", "Xenova/clip-vit-base-patch32", {quantized:true});
+  const labels = photos.map((_,i)=>`photo_${i}`);
+  // The zero-shot pipeline compares each image to text labels. To avoid
+  // reprocessing all images through a classification pipeline, use its
+  // output scores for the query against every image.
+  const scored=[];
+  for(let i=0;i<photos.length;i++){
+    const img=await imageFromPhoto(photos[i]);
+    const r=await textExtractor(img,{candidate_labels:[q]});
+    const score = Array.isArray(r) ? (r[0]?.score ?? 0) : 0;
+    scored.push({p:photos[i],score});
+  }
+  scored.sort((a,b)=>b.score-a.score);
+  const found=scored.filter(x=>x.score>0.18);
+  render(found.length?found.map(x=>x.p):scored.slice(0,8).map(x=>x.p));
+  status.textContent = found.length
+    ? `Нашёл ${found.length} фото по запросу «${q}».`
+    : `Точных совпадений не нашёл — показываю наиболее похожие фото.`;
+}
+
+function render(list){
+  grid.innerHTML="";
+  empty.style.display=list.length?"none":"block";
+  for(const p of list){
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`<img src="${p.url}" alt=""><div class="name">${escapeHtml(p.name)}</div>`;
+    grid.appendChild(card);
+  }
+}
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
 </script>
 </body>
 </html>
