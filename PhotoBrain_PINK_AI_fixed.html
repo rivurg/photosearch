@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PhotoBrain AI</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#ff2f92;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}
+main{max-width:900px;min-height:100vh;margin:auto;padding:42px 18px 90px;background:#050505;box-shadow:0 0 45px rgba(0,0,0,.22)}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+h1{font-size:38px;margin:0;font-weight:750;letter-spacing:-1.5px}
+.sub{color:#777;font-size:16px}
+.search{display:flex;gap:10px;align-items:center;border:1px solid #292929;background:#121212;border-radius:28px;padding:7px 8px 7px 15px}
+input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:white;font-size:18px}
+button{border:0;border-radius:22px;background:#fff;color:#111;padding:13px 18px;font-size:16px;font-weight:650}
+.add{width:48px;height:48px;padding:0;font-size:28px;background:#202020;color:white}
+.status{margin:16px 0;color:#888;min-height:24px}
+.chips{display:flex;gap:8px;overflow:auto;padding-bottom:12px}
+.chip{white-space:nowrap;background:#181818;color:#ddd;border:1px solid #292929;border-radius:20px;padding:9px 14px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:18px}
+.card{background:#111;border-radius:16px;overflow:hidden}
+.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.name{padding:9px 10px;color:#aaa;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{margin-top:28px;color:#777;text-align:center;padding:30px}
+progress{width:100%;height:6px}
+.small{font-size:13px;color:#666;line-height:1.45;margin-top:10px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>PhotoBrain</h1><div class="sub">AI photo search</div></header>
+
+<div class="chips">
+<button class="chip" data-q="мои кроссовки">Кроссовки</button>
+<button class="chip" data-q="куртка">Куртка</button>
+<button class="chip" data-q="машина">Машина</button>
+<button class="chip" data-q="люди">Люди</button>
+<button class="chip" data-q="последние">Последние</button>
+</div>
+
+<div class="search">
+<button class="add" id="add">+</button>
+<input id="query" placeholder="Например: чёрные кроссовки">
+<button id="go">➤</button>
+<input id="files" type="file" accept="image/*" multiple hidden>
+</div>
+
+<div id="status" class="status">Загрузи фотографии — AI будет искать по содержимому.</div>
+<progress id="progress" value="0" max="1" hidden></progress>
+<div id="hint" class="small"></div>
+<div id="grid" class="grid"></div>
+<div id="empty" class="empty">Пока фотографий нет.</div>
+</main>
+
+<script type="module">
+import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2";
+
+const filesInput = document.getElementById("files");
+const add = document.getElementById("add");
+const queryInput = document.getElementById("query");
+const go = document.getElementById("go");
+const grid = document.getElementById("grid");
+const empty = document.getElementById("empty");
+const status = document.getElementById("status");
+const progress = document.getElementById("progress");
+const hint = document.getElementById("hint");
+
+let photos = [];
+let extractor = null;
+let modelLoading = null;
+
+add.onclick = () => filesInput.click();
+filesInput.onchange = async e => {
+  const selected = [...e.target.files];
+  for (const file of selected) {
+    photos.push({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name,
+      embedding: null
+    });
+  }
+  render(photos);
+  filesInput.value = "";
+  if (photos.length) {
+    await ensureModel();
+    await indexNewPhotos();
+  }
+};
+
+document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+  queryInput.value = b.dataset.q;
+  search();
+});
+go.onclick = search;
+queryInput.onkeydown = e => { if(e.key === "Enter") search(); };
+
+async function ensureModel(){
+  if(extractor) return extractor;
+  if(modelLoading) return modelLoading;
+  status.textContent = "Первый запуск: загружаю AI-модель…";
+  hint.textContent = "Это может занять некоторое время. Потом модель останется в кэше браузера.";
+  modelLoading = pipeline("image-feature-extraction", "Xenova/clip-vit-base-patch32", {
+    quantized: true
+  });
+  extractor = await modelLoading;
+  modelLoading = null;
+  status.textContent = `AI готов. Фотографий: ${photos.length}`;
+  return extractor;
+}
+
+async function imageFromPhoto(p){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = p.url;
+  });
+}
+
+function normalize(arr){
+  let s = Math.sqrt(arr.reduce((a,v)=>a+v*v,0));
+  return arr.map(v=>v/(s||1));
+}
+function cosine(a,b){
+  let s=0;
+  for(let i=0;i<a.length;i++) s+=a[i]*b[i];
+  return s;
+}
+
+async function embedImage(p){
+  if(p.embedding) return p.embedding;
+  const img = await imageFromPhoto(p);
+  const out = await extractor(img);
+  let data = out.data ? Array.from(out.data) : Array.from(out.tolist()[0]);
+  p.embedding = normalize(data);
+  return p.embedding;
+}
+
+async function indexNewPhotos(){
+  progress.hidden=false;
+  for(let i=0;i<photos.length;i++){
+    if(photos[i].embedding) continue;
+    status.textContent = `AI анализирует фото ${i+1} из ${photos.length}…`;
+    progress.value = i/photos.length;
+    await embedImage(photos[i]);
+  }
+  progress.value=1;
+  progress.hidden=true;
+  status.textContent = `Готово. Проиндексировано фото: ${photos.length}`;
+  hint.textContent = "Поиск выполняется прямо в браузере; фотографии не загружаются на GitHub.";
+}
+
+async function search(){
+  const q = queryInput.value.trim();
+  if(!q) return;
+  if(!photos.length){ status.textContent="Сначала добавь фотографии."; return; }
+
+  if(q.toLowerCase()==="последние"){
+    render([...photos].reverse());
+    status.textContent="Показаны последние добавленные фото.";
+    return;
+  }
+
+  await ensureModel();
+  await indexNewPhotos();
+
+  status.textContent = "Ищу по содержимому фотографий…";
+  // CLIP text embeddings
+  const classifier = await pipeline("zero-shot-image-classification", "Xenova/clip-vit-base-patch32", {quantized:true});
+  const candidates = [
+    `a photo of ${q}`,
+    `a picture containing ${q}`,
+    `an image of ${q}`,
+    "something unrelated"
+  ];
+  const scored=[];
+  for(let i=0;i<photos.length;i++){
+    status.textContent = `Проверяю фото ${i+1} из ${photos.length}…`;
+    const img=await imageFromPhoto(photos[i]);
+    const r=await classifier(img,{candidate_labels:candidates});
+    const score = Array.isArray(r)
+      ? Math.max(...r.filter(x => x.label !== "something unrelated").map(x => x.score), 0)
+      : 0;
+    scored.push({p:photos[i],score});
+  }
+  scored.sort((a,b)=>b.score-a.score);
+  // CLIP scores are relative; show the strongest results and only hide
+  // obviously weak matches.
+  const found=scored.filter(x=>x.score>=0.35);
+  render(found.length?found.map(x=>x.p):scored.slice(0,8).map(x=>x.p));
+  status.textContent = found.length
+    ? `Нашёл ${found.length} подходящих фото по запросу «${q}».`
+    : `Сильного совпадения не нашёл — показываю самые похожие фото.`;
+}
+
+function render(list){
+  grid.innerHTML="";
+  empty.style.display=list.length?"none":"block";
+  for(const p of list){
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`<img src="${p.url}" alt=""><div class="name">${escapeHtml(p.name)}</div>`;
+    grid.appendChild(card);
+  }
+}
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+</script>
+</body>
+</html>
